@@ -1,0 +1,55 @@
+<script data-name="Script">
+(async function () {
+  console.log('[HideButton] Script iniciado');
+
+  const conversationId = window.location.pathname.split('/').pop(); // pega o último trecho da URL
+  const accountId = window.location.pathname.split('/')[3];
+
+  if (!conversationId || isNaN(conversationId)) {
+    console.log('[HideButton] Não está numa tela de conversa');
+    return;
+  }
+
+  // Aguarda axios
+  await waitFor(() => window.axios);
+
+  // Pega usuário logado
+  const currentUser = (await axios.get('/api/v1/profile')).data;
+  const currentUserId = currentUser.id;
+  console.log('[HideButton] Usuário logado', currentUserId, currentUser.name);
+
+  // Pega dados da conversa
+  const conversation = (await axios.get(`/api/v1/accounts/${accountId}/conversations/${conversationId}`)).data;
+  const assigneeId = conversation.meta?.assignee?.id || conversation.assignee_id;
+  console.log('[HideButton] Responsável pela conversa', assigneeId);
+
+  if (assigneeId !== currentUserId) {
+    console.log('[HideButton] Usuário diferente, ocultando botão');
+    hideButton();
+  } else {
+    console.log('[HideButton] É o responsável, botão visível');
+  }
+
+  function hideButton() {
+    const observer = new MutationObserver(() => {
+      const btn = document.querySelector('div.rounded-lg.shadow.outline-1');
+      if (btn) {
+        btn.style.display = 'none';
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  function waitFor(conditionFn, interval = 300) {
+    return new Promise(resolve => {
+      const i = setInterval(() => {
+        if (conditionFn()) {
+          clearInterval(i);
+          resolve();
+        }
+      }, interval);
+    });
+  }
+})();
+</script>
