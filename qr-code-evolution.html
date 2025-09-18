@@ -1,0 +1,88 @@
+<script data-name="QRCode" data-name="QRCode">
+(function () {
+  const TAB_ID = 'custom-qrcode-tab';
+  const SERVER_URL = 'https://evo.stacklab.digital';
+  const API_KEY = 'bCnSEZpZmtxN';
+  const INSTANCE_ID = 'musicly'; // substitua pelo ID real da instância
+
+  const observer = new MutationObserver(() => {
+    const tabsUl = document.querySelector('.flex > ul');
+    const contentContainer = document.querySelector('.flex.flex-col.flex-1');
+
+    if (tabsUl && contentContainer && !tabsUl.querySelector(`[data-tab="${TAB_ID}"]`)) {
+      // Criar aba QR Code
+      const li = document.createElement('li');
+      li.className = 'flex-shrink-0 my-0 mx-2 ltr:first:ml-0 rtl:first:mr-0 ltr:last:mr-0 rtl:last:ml-0 hover:text-n-slate-12';
+
+      const a = document.createElement('a');
+      a.dataset.tab = TAB_ID;
+      a.className = 'flex items-center flex-row border-b select-none cursor-pointer text-sm relative top-[1px] transition-[border-color] duration-[150ms] ease-[cubic-bezier(0.37,0,0.63,1)] border-transparent text-n-slate-11 py-2 text-sm';
+      a.textContent = 'QR Code';
+
+      a.addEventListener('click', async () => {
+        // Destacar aba
+        tabsUl.querySelectorAll('a').forEach(link => link.classList.remove('text-n-brand', 'border-n-brand'));
+        a.classList.add('text-n-brand', 'border-n-brand');
+
+        // Mostrar loading enquanto busca
+        contentContainer.innerHTML = `
+          <div class="ml-0 mr-0 py-8 w-full border-b border-solid border-n-weak/60 dark:border-n-weak">
+            <div class="flex justify-center items-center h-48 text-n-slate-11">Carregando QR Code...</div>
+          </div>
+        `;
+
+        try {
+          const res = await fetch(`${SERVER_URL}/instance/connect/${INSTANCE_ID}`, {
+            method: 'GET',
+            headers: {
+              'apikey': API_KEY
+            }
+          });
+
+          if (!res.ok) throw new Error(`Erro ${res.status}`);
+          const data = await res.json();
+
+          // Supondo que o retorno contenha uma URL do QR Code em `data.qrcode_url`
+          const qrUrl = data.qrcode_url || 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=mock-data';
+
+          // Renderizar conteúdo QR Code
+          contentContainer.innerHTML = `
+            <div class="ml-0 mr-0 py-8 w-full border-b border-solid border-n-weak/60 dark:border-n-weak">
+              <div class="grid grid-cols-1 lg:grid-cols-8 gap-6">
+                <div class="col-span-2">
+                  <p class="text-base text-n-brand mb-0 font-medium">QR Code da Conta</p>
+                  <p class="text-sm mb-2 text-n-slate-11 leading-5 tracking-normal mt-2">
+                    Escaneie este código para conectar seu dispositivo à plataforma.
+                  </p>
+                </div>
+                <div class="col-span-6 xl:col-span-5">
+                  <div class="flex flex-col items-start space-y-4">
+                    <div class="border border-dashed border-n-weak/60 rounded-xl p-6">
+                      <img src="${qrUrl}" alt="QR Code" class="mx-auto">
+                    </div>
+                    <button type="button"
+                      class="inline-flex items-center min-w-0 gap-2 transition-all duration-200 ease-in-out border-0 rounded-lg outline-1 outline disabled:opacity-50 bg-n-brand text-white hover:enabled:brightness-110 focus-visible:brightness-110 outline-transparent h-10 px-4 text-sm font-medium justify-center">
+                      Atualizar QR Code
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        } catch (err) {
+          contentContainer.innerHTML = `
+            <div class="ml-0 mr-0 py-8 w-full border-b border-solid border-n-weak/60 dark:border-n-weak">
+              <div class="flex justify-center items-center h-48 text-red-600">Erro ao carregar QR Code: ${err.message}</div>
+            </div>
+          `;
+        }
+      });
+
+      li.appendChild(a);
+      tabsUl.appendChild(li);
+    }
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+})();
+</script>
