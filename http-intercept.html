@@ -1,0 +1,74 @@
+<script>
+(function () {
+  console.log('[Interceptor] Script carregado');
+
+  // Aguarda Vue/Pinia carregar (garante que estamos no contexto certo)
+  const wait = setInterval(() => {
+    if (window.__vue__ || window.__NUXT__ || window.axios) {
+      clearInterval(wait);
+      console.log('[Interceptor] Ativando interceptadores...');
+      activateInterceptors();
+    }
+  }, 500);
+
+  function activateInterceptors() {
+    interceptFetch();
+    interceptXHR();
+    interceptAxios();
+  }
+
+  function logData(prefix, url, body) {
+    try {
+      const parsed = JSON.parse(body);
+      console.log(`%c${prefix}`, 'color: #22c55e; font-weight: bold', url, parsed);
+    } catch {
+      console.log(`%c${prefix}`, 'color: #22c55e; font-weight: bold', url, body);
+    }
+  }
+
+  function interceptFetch() {
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const [resource, config] = args;
+      const method = (config?.method || 'GET').toUpperCase();
+      const response = await originalFetch(...args);
+
+      if (method === 'GET') {
+        response.clone().text().then(text => logData('[FETCH GET]', resource, text));
+      }
+      return response;
+    };
+  }
+
+  function interceptXHR() {
+    const open = XMLHttpRequest.prototype.open;
+    const send = XMLHttpRequest.prototype.send;
+
+    XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+      this._method = method;
+      this._url = url;
+      return open.apply(this, [method, url, ...rest]);
+    };
+
+    XMLHttpRequest.prototype.send = function(...args) {
+      this.addEventListener('load', function() {
+        if (this._method?.toUpperCase() === 'GET') {
+          logData('[XHR GET]', this._url, this.responseText);
+        }
+      });
+      return send.apply(this, args);
+    };
+  }
+
+  function interceptAxios() {
+    if (!window.axios) return;
+
+    window.axios.interceptors.response.use(response => {
+      if (response.config?.method?.toUpperCase() === 'GET') {
+        logData('[AXIOS GET]', response.config.url, JSON.stringify(response.data));
+      }
+      return response;
+    });
+  }
+})();
+</script>
