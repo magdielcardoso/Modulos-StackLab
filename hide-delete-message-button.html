@@ -1,0 +1,24 @@
+<script data-name="hide-context-delete">
+(function () {
+  function hideDelete(root = document) {
+    // procura spans ou botões com texto "Excluir"
+    root.querySelectorAll('div,button,span,li').forEach(el => {
+      const txt = (el.textContent || '').trim().toLowerCase();
+      if (txt === 'excluir') {
+        el.style.setProperty('display', 'none', 'important');
+        el.setAttribute('data-hidden-ptbr', '1');
+      }
+    });
+  }
+
+  // primeira passada
+  hideDelete();
+
+  // observar mutações (menus abrem dinamicamente)
+  const mo = new MutationObserver(() => hideDelete());
+  mo.observe(document.body, { childList: true, subtree: true });
+
+  // reforço em delays
+  [100, 400, 1000].forEach(ms => setTimeout(hideDelete, ms));
+})();
+</script>
