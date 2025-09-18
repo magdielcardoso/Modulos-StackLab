@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Botão de Call Flutuante</title>
+    <style>
+        /* Botão flutuante de call */
+        .floating-call-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            z-index: 9999;
+            transition: all 0.3s ease;
+        }
+
+        .floating-call-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .floating-call-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Tooltip */
+        .call-tooltip {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .floating-call-btn:hover .call-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Animação de pulso */
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(37, 211, 102, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+            }
+        }
+
+        .floating-call-btn.pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Conteúdo da página aqui -->
+
+    <!-- Botão de Call Flutuante -->
+    <button class="floating-call-btn pulse" onclick="iniciarChamada()" title="Clique para ligar">
+        📞
+        <div class="call-tooltip">Ligar agora</div>
+    </button>
+
+    <script>
+        function iniciarChamada() {
+            // Número de telefone para ligação (substitua pelo seu número)
+            const numeroTelefone = "+5511999999999";
+
+            // Tenta abrir o aplicativo de telefone
+            if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                // Mobile - abre aplicativo de telefone
+                window.location.href = `tel:${numeroTelefone}`;
+            } else {
+                // Desktop - abre WhatsApp Web ou aplicativo
+                const whatsappUrl = `https://wa.me/${numeroTelefone.replace(/\D/g, '')}`;
+                window.open(whatsappUrl, '_blank');
+            }
+        }
+
+        // Função opcional para personalizar o comportamento
+        function personalizarBotao(config) {
+            const botao = document.querySelector('.floating-call-btn');
+
+            if (config.numero) {
+                botao.setAttribute('data-numero', config.numero);
+            }
+
+            if (config.texto) {
+                botao.querySelector('.call-tooltip').textContent = config.texto;
+            }
+
+            if (config.icone) {
+                botao.innerHTML = config.icone + botao.innerHTML.substring(1);
+            }
+
+            if (config.pulse === false) {
+                botao.classList.remove('pulse');
+            }
+        }
+
+        // Exemplo de uso:
+        // personalizarBotao({
+        //     numero: '+5511987654321',
+        //     texto: 'Fale conosco',
+        //     icone: '💬',
+        //     pulse: true
+        // });
+    </script>
+</body>
+
+</html>
