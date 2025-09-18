@@ -1,0 +1,373 @@
+---
+alwaysApply: true
+description: Guia completo para desenvolvimento de scripts e módulos StackLab
+---
+
+# Guia de Desenvolvimento - Módulos StackLab
+
+Este guia estabelece as melhores práticas para desenvolvimento de scripts e módulos para o ecossistema StackLab, focando em customizações do Chatwoot via Dashboard Scripts.
+
+## Estrutura Base de Scripts
+
+### Template Padrão para Módulos StackLab
+
+```javascript
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Aguardar carregamento completo da aplicação Vue
+  const waitForVue = setInterval(() => {
+    if (window.__vue__) {
+      clearInterval(waitForVue);
+      initializeStackLabModule();
+    }
+  }, 500);
+
+  function initializeStackLabModule() {
+    console.log('Módulo StackLab inicializado');
+    
+    // Verificar se o módulo já foi carregado
+    if (window.stackLabModuleLoaded) return;
+    window.stackLabModuleLoaded = true;
+    
+    // Implementar funcionalidade do módulo
+    implementarModulo();
+  }
+
+  function implementarModulo() {
+    // Código do módulo aqui
+  }
+});
+</script>
+```
+
+## Diretrizes de Desenvolvimento
+
+### 1. Princípios Fundamentais
+
+- **Mínimo Código**: Use sempre o mínimo de código possível
+- **Mínima Mudança**: Faça a menor alteração necessária no código atual
+- **Não Duplicação**: Sempre verificar se elementos já existem antes de criar
+- **Performance**: Usar observers para mudanças dinâmicas no DOM
+
+### 2. Estrutura de Arquivos
+
+```
+Modulos StackLab/
+├── .cursor/
+│   └── rules/
+│       └── stacklab-modules-development.mdc
+├── modules/
+│   ├── kanban-enhancements/
+│   ├── sidebar-customizations/
+│   ├── chat-automations/
+│   └── dashboard-widgets/
+└── scripts/
+    ├── utils/
+    └── templates/
+```
+
+### 3. Padrões de Nomenclatura
+
+- **Módulos**: `stacklab-[funcionalidade]-module`
+- **Classes CSS**: `sl-[componente]-[elemento]`
+- **IDs**: `stacklab-[modulo]-[elemento]`
+- **Funções**: `stackLab[Modulo][Acao]()`
+
+## Componentes Principais para Customização
+
+### Kanban (Prioridade Alta)
+```javascript
+// Seletores importantes
+const KANBAN_SELECTORS = {
+  container: '.kanban-container',
+  item: '.kanban-item',
+  header: '.kanban-header',
+  column: '.kanban-column',
+  actions: '.kanban-actions'
+};
+```
+
+### Sidebar
+```javascript
+// Seletores do sidebar
+const SIDEBAR_SELECTORS = {
+  primary: '.primary-sidebar',
+  secondary: '.secondary-sidebar',
+  menuItem: '.sidebar-menu-item'
+};
+```
+
+### Lista de Conversas
+```javascript
+// Seletores de conversas
+const CHAT_SELECTORS = {
+  list: '.conversation-list',
+  item: '.conversation-item',
+  view: '.conversation-view'
+};
+```
+
+## Template de Módulo Completo
+
+### Estrutura Base
+
+```javascript
+function criarModuloStackLab(config) {
+  const {
+    moduleName,
+    selector,
+    styles,
+    functionality,
+    shortcuts
+  } = config;
+
+  // 1. Verificar se já existe
+  if (document.getElementById(`stacklab-${moduleName}`)) return;
+
+  // 2. Aplicar estilos
+  if (styles) {
+    const style = document.createElement('style');
+    style.id = `stacklab-${moduleName}-styles`;
+    style.innerHTML = styles;
+    document.head.appendChild(style);
+  }
+
+  // 3. Criar elementos DOM
+  const moduleContainer = document.createElement('div');
+  moduleContainer.id = `stacklab-${moduleName}`;
+  
+  // 4. Implementar funcionalidade
+  if (functionality) {
+    functionality(moduleContainer);
+  }
+
+  // 5. Adicionar atalhos
+  if (shortcuts) {
+    adicionarAtalhos(shortcuts);
+  }
+
+  // 6. Observer para mudanças dinâmicas
+  const observer = new MutationObserver(() => {
+    if (!document.getElementById(`stacklab-${moduleName}`)) {
+      criarModuloStackLab(config);
+    }
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+```
+
+### Exemplo Prático: Módulo de Exportação Kanban
+
+```javascript
+function criarModuloExportacaoKanban() {
+  criarModuloStackLab({
+    moduleName: 'kanban-export',
+    selector: '.kanban-header',
+    styles: `
+      .sl-export-btn {
+        background: #84CC16;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-left: 8px;
+      }
+      .sl-export-btn:hover {
+        background: #65A30D;
+      }
+    `,
+    functionality: (container) => {
+      const header = document.querySelector('.kanban-header');
+      if (!header) return;
+
+      const exportBtn = document.createElement('button');
+      exportBtn.className = 'sl-export-btn';
+      exportBtn.innerHTML = '📊 Exportar';
+      exportBtn.onclick = () => exportarDadosKanban();
+
+      header.appendChild(exportBtn);
+    },
+    shortcuts: {
+      'Alt+E': () => exportarDadosKanban()
+    }
+  });
+}
+
+function exportarDadosKanban() {
+  // Acessar dados via Vue
+  const vueInstance = window.__vue__;
+  if (!vueInstance) return;
+
+  const store = vueInstance.$store;
+  const kanbanItems = store.getters['kanban/getKanbanItems'] || [];
+  
+  // Gerar e baixar CSV
+  const csv = gerarCSV(kanbanItems);
+  baixarArquivo(csv, 'kanban-export.csv');
+}
+```
+
+## Utilitários Comuns
+
+### Acesso ao Estado Vue/Vuex
+
+```javascript
+function acessarEstadoVue() {
+  const vue = window.__vue__;
+  if (!vue) return null;
+  
+  return {
+    instance: vue,
+    store: vue.$store,
+    router: vue.$router,
+    currentUser: vue.$store.getters.getCurrentUser,
+    kanbanItems: vue.$store.getters['kanban/getKanbanItems']
+  };
+}
+```
+
+### Helpers de DOM
+
+```javascript
+const StackLabUtils = {
+  // Aguardar elemento aparecer no DOM
+  waitForElement: (selector, timeout = 5000) => {
+    return new Promise((resolve, reject) => {
+      const element = document.querySelector(selector);
+      if (element) return resolve(element);
+
+      const observer = new MutationObserver(() => {
+        const element = document.querySelector(selector);
+        if (element) {
+          observer.disconnect();
+          resolve(element);
+        }
+      });
+
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      setTimeout(() => {
+        observer.disconnect();
+        reject(new Error(`Elemento ${selector} não encontrado em ${timeout}ms`));
+      }, timeout);
+    });
+  },
+
+  // Criar elemento com atributos
+  createElement: (tag, attributes = {}, children = []) => {
+    const element = document.createElement(tag);
+    
+    Object.entries(attributes).forEach(([key, value]) => {
+      if (key === 'style' && typeof value === 'object') {
+        Object.assign(element.style, value);
+      } else {
+        element.setAttribute(key, value);
+      }
+    });
+
+    children.forEach(child => {
+      if (typeof child === 'string') {
+        element.innerHTML += child;
+      } else {
+        element.appendChild(child);
+      }
+    });
+
+    return element;
+  },
+
+  // Adicionar CSS
+  addCSS: (css, id) => {
+    if (document.getElementById(id)) return;
+    
+    const style = document.createElement('style');
+    style.id = id;
+    style.innerHTML = css;
+    document.head.appendChild(style);
+  }
+};
+```
+
+### Sistema de Atalhos
+
+```javascript
+function adicionarAtalhos(shortcuts) {
+  document.addEventListener('keydown', (e) => {
+    const key = `${e.altKey ? 'Alt+' : ''}${e.ctrlKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.code.replace('Key', '')}`;
+    
+    if (shortcuts[key]) {
+      e.preventDefault();
+      shortcuts[key]();
+    }
+  });
+}
+```
+
+## Instalação e Deploy
+
+### 1. Instalação via Dashboard Scripts
+
+1. Acesse `https://seuchatwoot.com/super_admin/dashboard_scripts`
+2. Cole o código do módulo
+3. Salve as alterações
+
+### 2. Desenvolvimento Local
+
+Para desenvolver e testar módulos localmente:
+
+```javascript
+// Usar este snippet para injetar durante desenvolvimento
+(function() {
+  const script = document.createElement('script');
+  script.src = 'http://localhost:3000/seu-modulo.js';
+  document.head.appendChild(script);
+})();
+```
+
+## Melhores Práticas
+
+### Performance
+- Use `requestAnimationFrame` para animações
+- Debounce eventos frequentes (scroll, resize)
+- Cache seletores DOM reutilizados
+
+### Compatibilidade
+- Sempre verificar se APIs/elementos existem antes de usar
+- Implementar fallbacks para funcionalidades opcionais
+- Testar em diferentes navegadores
+
+### Manutenibilidade
+- Comentar código complexo
+- Usar nomes descritivos para variáveis e funções
+- Modularizar funcionalidades grandes
+
+### Segurança
+- Sanitizar dados de entrada
+- Evitar `eval()` e `innerHTML` com dados não confiáveis
+- Validar permissões antes de executar ações
+
+## Debugging e Desenvolvimento
+
+### Console de Debug
+
+```javascript
+// Adicionar ao final do script para debug
+if (localStorage.getItem('stacklab-debug') === 'true') {
+  window.StackLabDebug = {
+    vue: window.__vue__,
+    store: window.__vue__?.$store,
+    modules: Object.keys(window).filter(k => k.startsWith('stackLab'))
+  };
+  console.log('StackLab Debug Mode:', window.StackLabDebug);
+}
+```
+
+### Ativar debug no console:
+```javascript
+localStorage.setItem('stacklab-debug', 'true');
+location.reload();
+```
+
+Este guia deve ser seguido para manter consistência e qualidade no desenvolvimento dos módulos StackLab.
